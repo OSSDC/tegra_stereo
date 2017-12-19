@@ -126,7 +126,7 @@ void TegraStereoProc::imageCallback (
 
         left_model_.rectifyImage (left_raw, left_rect, cv::INTER_LINEAR);
         right_model_.rectifyImage (right_raw, right_rect, cv::INTER_LINEAR);
-        publishRectifiedImages(left_rect, right_rect, l_image_msg, r_image_msg);
+        //publishRectifiedImages(left_rect, right_rect, l_image_msg, r_image_msg);
         processRectified(left_rect, right_rect, l_image_msg);
     }
     else
