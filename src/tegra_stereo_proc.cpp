@@ -31,32 +31,7 @@ void TegraStereoProc::onInit()
     private_nh.param<std::string> ("out_left_frame_id", out_left_frame_id, "");
     private_nh.param<std::string> ("out_right_frame_id", out_right_frame_id, "");
 
-
-    //camera calibration files
-    std::string cameraCalibrationFileLeft;
-    std::string cameraCalibrationFileRight;
-    private_nh.param<std::string> ("camera_calibration_file_left", cameraCalibrationFileLeft, "");
-    private_nh.param<std::string> ("camera_calibration_file_right", cameraCalibrationFileRight, "");
-
-    if (! (cameraCalibrationFileRight.empty() && cameraCalibrationFileLeft.empty()))
-    {
-        std::string cameraName;
-        NODELET_INFO_STREAM ("Stereo calibration left:" << cameraCalibrationFileLeft);
-        NODELET_INFO_STREAM ("Stereo calibration right:" << cameraCalibrationFileRight);
-        camera_calibration_parsers::readCalibration (cameraCalibrationFileLeft, cameraName, mCameraInfoLeft_);
-        camera_calibration_parsers::readCalibration (cameraCalibrationFileRight, cameraName, mCameraInfoRight_);
-
-        left_model_.fromCameraInfo (mCameraInfoLeft_);
-        right_model_.fromCameraInfo (mCameraInfoRight_);
-        stereo_model_.fromCameraInfo (mCameraInfoLeft_, mCameraInfoRight_);
-        NODELET_INFO ("Stereo calibration initialized from file");
-
-    }
-    else
-    {
-        NODELET_INFO ("Stereo calibration files are not specified ,waiting for camera_info messages");
-    }
-
+    // ros sub pubs
     imageTransport_ = boost::make_shared<image_transport::ImageTransport> (private_nh);
 
     left_raw_sub_.subscribe (*imageTransport_.get(), "/stereo/left/image_raw", queue_size_);
@@ -79,6 +54,34 @@ void TegraStereoProc::onInit()
 
     image_exact_sync_ = boost::make_shared<ImageExactSync_t> (ImageExactPolicy_t (10u), left_raw_sub_, right_raw_sub_);
 
+    //camera calibration files
+    std::string cameraCalibrationFileLeft;
+    std::string cameraCalibrationFileRight;
+    private_nh.param<std::string> ("camera_calibration_file_left", cameraCalibrationFileLeft, "");
+    private_nh.param<std::string> ("camera_calibration_file_right", cameraCalibrationFileRight, "");
+
+    if (! (cameraCalibrationFileRight.empty() && cameraCalibrationFileLeft.empty()))
+    {
+        std::string cameraName;
+        NODELET_INFO_STREAM ("Stereo calibration left:" << cameraCalibrationFileLeft);
+        NODELET_INFO_STREAM ("Stereo calibration right:" << cameraCalibrationFileRight);
+        camera_calibration_parsers::readCalibration (cameraCalibrationFileLeft, cameraName, mCameraInfoLeft_);
+        camera_calibration_parsers::readCalibration (cameraCalibrationFileRight, cameraName, mCameraInfoRight_);
+
+        left_model_.fromCameraInfo (mCameraInfoLeft_);
+        right_model_.fromCameraInfo (mCameraInfoRight_);
+        stereo_model_.fromCameraInfo (mCameraInfoLeft_, mCameraInfoRight_);
+	std::call_once (calibration_initialized_flag_, [ &, this] () {
+		image_exact_sync_->registerCallback (boost::bind (&TegraStereoProc::imageCallback, this, _1, _2));
+	});
+        NODELET_INFO ("Stereo calibration initialized from file");
+
+    }
+    else
+    {
+        NODELET_INFO ("Stereo calibration files are not specified ,waiting for camera_info messages");
+    }
+	
 
     // Initialize Semi-Global Matcher
     init_disparity_method (static_cast<uint8_t> (p1_), static_cast<uint8_t> (p2_));
