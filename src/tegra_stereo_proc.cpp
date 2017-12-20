@@ -293,7 +293,7 @@ inline bool isValidPoint(const cv::Vec3f& pt)
 {
   // Check both for disparities explicitly marked as invalid (where OpenCV maps pt.z to MISSING_Z)
   // and zero disparities (point mapped to infinity).
-  return pt[2] != image_geometry::StereoCameraModel::MISSING_Z && !std::isinf(pt[2]);
+  return (pt[2]!=image_geometry::StereoCameraModel::MISSING_Z && !std::isinf(pt[2])) && !std::isnan(pt[2]);
 }
 
 void TegraStereoProc::processPoints(const stereo_msgs::DisparityImageConstPtr& disparityMsgPrt,
@@ -393,9 +393,10 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
   const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
   stereo_model_.projectDisparityImageTo3d(dmat, dense_points_, true);
 
+  int32_t margin = 30;
   // Fill in sparse point cloud message
-  pointsMsgPrt->height = dense_points_.rows;
-  pointsMsgPrt->width  = dense_points_.cols;
+  pointsMsgPrt->height = dense_points_.rows-margin*2;
+  pointsMsgPrt->width  = dense_points_.cols-margin*2;
   pointsMsgPrt->fields.resize (4);
   pointsMsgPrt->fields[0].name = "x";
   pointsMsgPrt->fields[0].offset = 0;
@@ -421,8 +422,8 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
 
   float bad_point = std::numeric_limits<float>::quiet_NaN ();
   int i = 0;
-  for (int32_t u = 0; u < dense_points_.rows; ++u) {
-    for (int32_t v = 0; v < dense_points_.cols; ++v, ++i) {
+  for (int32_t u = margin; u < dense_points_.rows-margin; ++u) {
+    for (int32_t v = margin; v < dense_points_.cols-margin; ++v, ++i) {
       if (isValidPoint(dense_points_(u,v))) {
         // x,y,z,rgba
         memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 0], &dense_points_(u,v)[0], sizeof (float));
@@ -440,50 +441,32 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
   // Fill in color
   namespace enc = sensor_msgs::image_encodings;
   i = 0;
-  if (encoding == enc::MONO8) {
-    for (int32_t u = 0; u < dense_points_.rows; ++u) {
-      for (int32_t v = 0; v < dense_points_.cols; ++v, ++i) {
-        if (isValidPoint(dense_points_(u,v))) {
+  
+  for (int32_t u = margin; u < dense_points_.rows-margin; ++u) {
+    for (int32_t v = margin; v < dense_points_.cols-margin; ++v, ++i) {
+      if (isValidPoint(dense_points_(u,v))) {
+
+	if (encoding == enc::MONO8) {
           uint8_t g = color.at<uint8_t>(u,v);
           int32_t rgb = (g << 16) | (g << 8) | g;
           memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &rgb, sizeof (int32_t));
-        }
-        else {
-          memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &bad_point, sizeof (float));
-        }
-      }
-    }
-  }
-  else if (encoding == enc::RGB8) {
-    for (int32_t u = 0; u < dense_points_.rows; ++u) {
-      for (int32_t v = 0; v < dense_points_.cols; ++v, ++i) {
-        if (isValidPoint(dense_points_(u,v))) {
-          const cv::Vec3b& rgb = color.at<cv::Vec3b>(u,v);
+	} else if (encoding == enc::RGB8) {
+	  const cv::Vec3b& rgb = color.at<cv::Vec3b>(u,v);
           int32_t rgb_packed = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
           memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &rgb_packed, sizeof (int32_t));
-        }
-        else {
-          memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &bad_point, sizeof (float));
-        }
-      }
-    }
-  }
-  else if (encoding == enc::BGR8) {
-    for (int32_t u = 0; u < dense_points_.rows; ++u) {
-      for (int32_t v = 0; v < dense_points_.cols; ++v, ++i) {
-        if (isValidPoint(dense_points_(u,v))) {
-          const cv::Vec3b& bgr = color.at<cv::Vec3b>(u,v);
+	} else if (encoding == enc::BGR8) {
+	  const cv::Vec3b& bgr = color.at<cv::Vec3b>(u,v);
           int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
           memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &rgb_packed, sizeof (int32_t));
-        }
-        else {
-          memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &bad_point, sizeof (float));
-        }
+	} else {
+	  ROS_WARN("Could not fill color channel of the point cloud, unrecognized encoding '%s'", encoding.c_str());
+	}
+
+      }
+      else {
+        memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 12], &bad_point, sizeof (float));
       }
     }
-  }
-  else {
-    ROS_WARN("Could not fill color channel of the point cloud, unrecognized encoding '%s'", encoding.c_str());
   }
 }
 
