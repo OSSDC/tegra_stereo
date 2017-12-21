@@ -270,11 +270,7 @@ void TegraStereoProc::processDisparity (const cv::Mat &disparity, const std_msgs
     dimage.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
     dimage.step = dimage.width * sizeof (float);
     dimage.data.resize (dimage.step * dimage.height);
-
-    const cv::Mat_<float> dmat (dimage.height, dimage.width, static_cast<float*> (static_cast<void*> (dimage.data.data())),
-                                dimage.step);
-    // TODO check why these are different
-    //const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
+    const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
 
     // Stereo parameters
     disparityMsgPtr->f = stereo_model_.right().fx();
