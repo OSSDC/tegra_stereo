@@ -180,7 +180,13 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
   {
 
     float elapsed_time_ms;
+    // Compute disparity CUDA
     cv::Mat disparity_raw = compute_disparity_method (left_rect_cv, right_rect_cv, &elapsed_time_ms);
+    // filter disparity ARM
+    //cv::Mat disparity_filtered;
+    //cv::ximgproc::fastGlobalSmootherFilter(left_rect_cv, disparity_raw, disparity_filtered, 20.0, 2.0);
+    
+    // timing
     elapsed_time_ms_acc_ += elapsed_time_ms;
     elapsed_time_counter_++;
 
@@ -293,7 +299,8 @@ inline bool isValidPoint(const cv::Vec3f& pt)
 {
   // Check both for disparities explicitly marked as invalid (where OpenCV maps pt.z to MISSING_Z)
   // and zero disparities (point mapped to infinity).
-  return (pt[2]!=image_geometry::StereoCameraModel::MISSING_Z && !std::isinf(pt[2])) && !std::isnan(pt[2]);
+  return (((pt[2]!=image_geometry::StereoCameraModel::MISSING_Z && !std::isinf(pt[2])) && !std::isnan(pt[2])) &&
+		pt[2] <= 5.0) && pt[2] >= 0.7;
 }
 
 void TegraStereoProc::processPoints(const stereo_msgs::DisparityImageConstPtr& disparityMsgPrt,
@@ -393,10 +400,12 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
   const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
   stereo_model_.projectDisparityImageTo3d(dmat, dense_points_, true);
 
-  int32_t margin = 30;
+  int32_t margin_x = 200; // pixels at the edge of the frame to avoid
+  int32_t margin_y = 80;
+
   // Fill in sparse point cloud message
-  pointsMsgPrt->height = dense_points_.rows-margin*2;
-  pointsMsgPrt->width  = dense_points_.cols-margin*2;
+  pointsMsgPrt->height = dense_points_.rows-margin_y*2;
+  pointsMsgPrt->width  = dense_points_.cols-margin_x*2;
   pointsMsgPrt->fields.resize (4);
   pointsMsgPrt->fields[0].name = "x";
   pointsMsgPrt->fields[0].offset = 0;
@@ -422,8 +431,8 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
 
   float bad_point = std::numeric_limits<float>::quiet_NaN ();
   int i = 0;
-  for (int32_t u = margin; u < dense_points_.rows-margin; ++u) {
-    for (int32_t v = margin; v < dense_points_.cols-margin; ++v, ++i) {
+  for (int32_t u = margin_y; u < dense_points_.rows-margin_y; ++u) {
+    for (int32_t v = margin_x; v < dense_points_.cols-margin_x; ++v, ++i) {
       if (isValidPoint(dense_points_(u,v))) {
         // x,y,z,rgba
         memcpy (&pointsMsgPrt->data[i * pointsMsgPrt->point_step + 0], &dense_points_(u,v)[0], sizeof (float));
@@ -442,8 +451,8 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
   namespace enc = sensor_msgs::image_encodings;
   i = 0;
   
-  for (int32_t u = margin; u < dense_points_.rows-margin; ++u) {
-    for (int32_t v = margin; v < dense_points_.cols-margin; ++v, ++i) {
+  for (int32_t u = margin_y; u < dense_points_.rows-margin_y; ++u) {
+    for (int32_t v = margin_x; v < dense_points_.cols-margin_x; ++v, ++i) {
       if (isValidPoint(dense_points_(u,v))) {
 
 	if (encoding == enc::MONO8) {

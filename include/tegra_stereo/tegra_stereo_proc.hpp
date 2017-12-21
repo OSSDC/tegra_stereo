@@ -24,6 +24,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/ximgproc/edge_filter.hpp>
 #include <cv_bridge/cv_bridge.h>
 
 #include "tegra_stereo/disparity_method.h"
@@ -82,6 +83,8 @@ private:
     // scratch buffer for dense point cloud
     mutable cv::Mat_<cv::Vec3f> dense_points_;
 
+    // filter for disparity image
+    //cv::Ptr<cv::ximgproc::FastGlobalSmootherFilter> disp_filter_;
 
     // stereo matching parameters, more in configuration.h
     ///
