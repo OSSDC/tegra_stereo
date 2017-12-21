@@ -300,7 +300,7 @@ inline bool isValidPoint(const cv::Vec3f& pt)
   // Check both for disparities explicitly marked as invalid (where OpenCV maps pt.z to MISSING_Z)
   // and zero disparities (point mapped to infinity).
   return (((pt[2]!=image_geometry::StereoCameraModel::MISSING_Z && !std::isinf(pt[2])) && !std::isnan(pt[2])) &&
-		pt[2] <= 5.0) && pt[2] >= 0.7;
+		pt[2] <= 5.0) && pt[2] >= 0.5;
 }
 
 void TegraStereoProc::processPoints(const stereo_msgs::DisparityImageConstPtr& disparityMsgPrt,
@@ -400,8 +400,8 @@ void TegraStereoProc::processPoints2(const stereo_msgs::DisparityImageConstPtr& 
   const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
   stereo_model_.projectDisparityImageTo3d(dmat, dense_points_, true);
 
-  int32_t margin_x = 200; // pixels at the edge of the frame to avoid
-  int32_t margin_y = 80;
+  int32_t margin_x = 100; // pixels at the edge of the frame to avoid
+  int32_t margin_y = 40;
 
   // Fill in sparse point cloud message
   pointsMsgPrt->height = dense_points_.rows-margin_y*2;
