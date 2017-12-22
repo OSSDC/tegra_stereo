@@ -195,11 +195,13 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
     }
 
     // filter disparity ARM (remove noisy measurments)
-    cv::Mat disparity_blur; 		cv::GaussianBlur( disparity_raw, disparity_blur, cv::Size(5, 5), 0, 0 );
-    cv::Mat disparity_edge;		cv::Sobel( disparity_blur, disparity_edge, CV_8U, 1, 1, 3);
-    cv::Mat disparity_edge_threshold;	cv::threshold( disparity_edge, disparity_edge_threshold, 0.1, 255, cv::THRESH_BINARY);
-    cv::Mat mask_inv; 			cv::bitwise_not(disparity_edge_threshold, mask_inv);
-    cv::Mat disparity_filtered;		cv::bitwise_and(disparity_raw, mask_inv, disparity_filtered);
+    const int sigma = 5;
+    cv::Mat disp_edge;			cv::Laplacian (disparity_raw, disp_edge, CV_16S, 5);
+    cv::Mat disp_abs;			cv::convertScaleAbs(disp_edge, disp_abs);
+    cv::Mat disp_smt;			cv::GaussianBlur(disp_abs, disp_smt, cv::Size(sigma*5, sigma*5), sigma, sigma);
+    					disp_smt.convertTo(disp_smt, CV_8U);
+    cv::Mat disparity_edge_threshold;	cv::threshold (disp_smt, disparity_edge_threshold, 50, 255, cv::THRESH_BINARY_INV);
+    cv::Mat disparity_filtered;		cv::bitwise_and (disparity_raw, disparity_edge_threshold, disparity_filtered, disparity_edge_threshold);
 
     //publish raw disparity output in pixels
     if(pub_disparity_raw_.getNumSubscribers() >0)
