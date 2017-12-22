@@ -24,7 +24,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/ximgproc/edge_filter.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <cv_bridge/cv_bridge.h>
 
 #include "tegra_stereo/disparity_method.h"

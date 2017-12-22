@@ -86,7 +86,6 @@ void TegraStereoProc::onInit()
     // Initialize Semi-Global Matcher
     init_disparity_method (static_cast<uint8_t> (p1_), static_cast<uint8_t> (p2_));
     NODELET_INFO ("Init done; P1 %d; P2: %d", p1_, p2_);
-
 }
 
 void TegraStereoProc::infoCallback (
@@ -182,9 +181,6 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
     float elapsed_time_ms;
     // Compute disparity CUDA
     cv::Mat disparity_raw = compute_disparity_method (left_rect_cv, right_rect_cv, &elapsed_time_ms);
-    // filter disparity ARM
-    //cv::Mat disparity_filtered;
-    //cv::ximgproc::fastGlobalSmootherFilter(left_rect_cv, disparity_raw, disparity_filtered, 20.0, 2.0);
     
     // timing
     elapsed_time_ms_acc_ += elapsed_time_ms;
@@ -198,13 +194,17 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
         elapsed_time_ms_acc_ = 0.0;
     }
 
-    stereo_msgs::DisparityImagePtr disparity_msgPtr = boost::make_shared<stereo_msgs::DisparityImage>();
-
+    // filter disparity ARM (remove noisy measurments)
+    cv::Mat disparity_blur; 		cv::GaussianBlur( disparity_raw, disparity_blur, cv::Size(5, 5), 0, 0 );
+    cv::Mat disparity_edge;		cv::Sobel( disparity_blur, disparity_edge, CV_8U, 1, 1, 3);
+    cv::Mat disparity_edge_threshold;	cv::threshold( disparity_edge, disparity_edge_threshold, 0.1, 255, cv::THRESH_BINARY);
+    cv::Mat mask_inv; 			cv::bitwise_not(disparity_edge_threshold, mask_inv);
+    cv::Mat disparity_filtered;		cv::bitwise_and(disparity_raw, mask_inv, disparity_filtered);
 
     //publish raw disparity output in pixels
     if(pub_disparity_raw_.getNumSubscribers() >0)
     {
-        sensor_msgs::ImagePtr raw_disp_msg = cv_bridge::CvImage (leftImgPtr->header, sensor_msgs::image_encodings::MONO8, disparity_raw).toImageMsg();
+        sensor_msgs::ImagePtr raw_disp_msg = cv_bridge::CvImage (leftImgPtr->header, sensor_msgs::image_encodings::MONO8, disparity_filtered).toImageMsg();
         if(out_left_frame_id.length() > 0)
         {
             raw_disp_msg->header.frame_id = out_left_frame_id;
@@ -214,7 +214,8 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
     }
 
     //scale the disparity and publish
-    processDisparity (disparity_raw, leftImgPtr->header, disparity_msgPtr);
+    stereo_msgs::DisparityImagePtr disparity_msgPtr = boost::make_shared<stereo_msgs::DisparityImage>();
+    processDisparity (disparity_filtered, leftImgPtr->header, disparity_msgPtr);
 
     if(pub_disparity_.getNumSubscribers()>0)
     {
