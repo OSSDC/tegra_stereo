@@ -255,8 +255,8 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
 void TegraStereoProc::processDisparity (const cv::Mat &disparity, const std_msgs::Header &header, stereo_msgs::DisparityImagePtr &disparityMsgPtr)
 {
 
-    // Publish disparity
-    static const int DPP = 1; // disparities per pixel
+    // convert to ros disparity message
+    static const double DPP = 1.0; // disparities per pixel
     static const double inv_dpp = 1.0 / DPP;
 
 
