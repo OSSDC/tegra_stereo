@@ -115,22 +115,22 @@ void TegraStereoProc::imageCallback (
 {
 
     //Convert to CV format MONO 8bit
-    const cv::Mat left_raw = cv_bridge::toCvShare (l_image_msg, sensor_msgs::image_encodings::MONO8)->image;
-    const cv::Mat right_raw = cv_bridge::toCvShare (r_image_msg, sensor_msgs::image_encodings::MONO8)->image;
+    cv_bridge::CvImageConstPtr left_raw_ptr  = cv_bridge::toCvShare (l_image_msg, sensor_msgs::image_encodings::MONO8);
+    cv_bridge::CvImageConstPtr right_raw_ptr = cv_bridge::toCvShare (r_image_msg, sensor_msgs::image_encodings::MONO8);
 
     if (rectifyImages_)
     {
         cv::Mat left_rect;
         cv::Mat right_rect;
 
-        left_model_.rectifyImage (left_raw, left_rect, cv::INTER_LINEAR);
-        right_model_.rectifyImage (right_raw, right_rect, cv::INTER_LINEAR);
+        left_model_.rectifyImage (left_raw_ptr->image, left_rect, cv::INTER_LINEAR);
+        right_model_.rectifyImage (right_raw_ptr->image, right_rect, cv::INTER_LINEAR);
         //publishRectifiedImages(left_rect, right_rect, l_image_msg, r_image_msg);
         processRectified(left_rect, right_rect, l_image_msg);
     }
     else
     {
-        processRectified(left_raw, right_raw, l_image_msg);
+        processRectified(left_raw_ptr->image, right_raw_ptr->image, l_image_msg);
     }
 
 
@@ -200,7 +200,7 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
     cv::Mat disp_abs;			cv::convertScaleAbs(disp_edge, disp_abs);
     cv::Mat disp_smt;			cv::GaussianBlur(disp_abs, disp_smt, cv::Size(sigma*5, sigma*5), sigma, sigma);
     					disp_smt.convertTo(disp_smt, CV_8U);
-    cv::Mat disparity_edge_threshold;	cv::threshold (disp_smt, disparity_edge_threshold, 50, 255, cv::THRESH_BINARY_INV);
+    cv::Mat disparity_edge_threshold;	cv::threshold (disp_smt, disparity_edge_threshold, 40, 255, cv::THRESH_BINARY_INV);
     cv::Mat disparity_filtered;		cv::bitwise_and (disparity_raw, disparity_edge_threshold, disparity_filtered, disparity_edge_threshold);
 
     //publish raw disparity output in pixels
