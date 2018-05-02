@@ -33,6 +33,7 @@ namespace tegra_stereo
 {
 
 using message_filters::sync_policies::ExactTime;
+using message_filters::sync_policies::ApproximateTime;
 
 class TegraStereoProc : public nodelet::Nodelet
 {
@@ -42,6 +43,11 @@ class TegraStereoProc : public nodelet::Nodelet
     using ImageExactSync_t = message_filters::Synchronizer<ImageExactPolicy_t>;
     using InfoExactPolicy_t = ExactTime<sensor_msgs::CameraInfo, sensor_msgs::CameraInfo>;
     using InfoExactSync_t = message_filters::Synchronizer<InfoExactPolicy_t>;
+
+    using ImageApproxPolicy_t = ApproximateTime<sensor_msgs::Image, sensor_msgs::Image>;
+    using ImageApproxSync_t = message_filters::Synchronizer<ImageApproxPolicy_t>;
+    using InfoApproxPolicy_t = ApproximateTime<sensor_msgs::CameraInfo, sensor_msgs::CameraInfo>;
+    using InfoApproxSync_t = message_filters::Synchronizer<InfoApproxPolicy_t>;
 
 public:
     TegraStereoProc();
@@ -59,8 +65,8 @@ private:
     SubscriberFilter_t left_raw_sub_, right_raw_sub_;
     InfoSubscriber_t left_info_sub_, right_info_sub_;
 
-    boost::shared_ptr<ImageExactSync_t> image_exact_sync_;
-    boost::shared_ptr<InfoExactSync_t> info_exact_sync_;
+    boost::shared_ptr<ImageApproxSync_t> image_exact_sync_;
+    boost::shared_ptr<InfoApproxSync_t> info_exact_sync_;
 
     ros::Publisher pub_disparity_;
     ros::Publisher pub_points_;

@@ -49,10 +49,10 @@ void TegraStereoProc::onInit()
     pub_points2_ = private_nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
 
     // Synchronize input topics
-    info_exact_sync_ = boost::make_shared<InfoExactSync_t> (InfoExactPolicy_t (10u), left_info_sub_, right_info_sub_);
-    info_exact_sync_->registerCallback (boost::bind (&TegraStereoProc::infoCallback, this, _1, _2));
+    info_approx_sync_ = boost::make_shared<InfoApproxSync_t> (InfoExactPolicy_t (10u), left_info_sub_, right_info_sub_);
+    info_approx_sync_->registerCallback (boost::bind (&TegraStereoProc::infoCallback, this, _1, _2));
 
-    image_exact_sync_ = boost::make_shared<ImageExactSync_t> (ImageExactPolicy_t (10u), left_raw_sub_, right_raw_sub_);
+    image_approx_sync_ = boost::make_shared<ImageApproxSync_t> (ImageExactPolicy_t (10u), left_raw_sub_, right_raw_sub_);
 
     //camera calibration files
     std::string cameraCalibrationFileLeft;
@@ -72,7 +72,7 @@ void TegraStereoProc::onInit()
         right_model_.fromCameraInfo (mCameraInfoRight_);
         stereo_model_.fromCameraInfo (mCameraInfoLeft_, mCameraInfoRight_);
 	std::call_once (calibration_initialized_flag_, [ &, this] () {
-		image_exact_sync_->registerCallback (boost::bind (&TegraStereoProc::imageCallback, this, _1, _2));
+		image_approx_sync_->registerCallback (boost::bind (&TegraStereoProc::imageCallback, this, _1, _2));
 	});
         NODELET_INFO ("Stereo calibration initialized from file");
 
@@ -104,7 +104,7 @@ void TegraStereoProc::infoCallback (
         //we do not need to listen to this anymore
         right_info_sub_.unsubscribe();
         left_info_sub_.unsubscribe();
-        image_exact_sync_->registerCallback (boost::bind (&TegraStereoProc::imageCallback, this, _1, _2));
+        image_approx_sync_->registerCallback (boost::bind (&TegraStereoProc::imageCallback, this, _1, _2));
         NODELET_INFO ("Stereo calibration initialized from first message");
     });
 }
