@@ -49,10 +49,10 @@ void TegraStereoProc::onInit()
     pub_points2_ = private_nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
 
     // Synchronize input topics
-    info_approx_sync_ = boost::make_shared<InfoApproxSync_t> (InfoExactPolicy_t (10u), left_info_sub_, right_info_sub_);
+    info_approx_sync_ = boost::make_shared<InfoApproxSync_t> (InfoApproxPolicy_t (10u), left_info_sub_, right_info_sub_);
     info_approx_sync_->registerCallback (boost::bind (&TegraStereoProc::infoCallback, this, _1, _2));
 
-    image_approx_sync_ = boost::make_shared<ImageApproxSync_t> (ImageExactPolicy_t (10u), left_raw_sub_, right_raw_sub_);
+    image_approx_sync_ = boost::make_shared<ImageApproxSync_t> (ImageApproxPolicy_t (10u), left_raw_sub_, right_raw_sub_);
 
     //camera calibration files
     std::string cameraCalibrationFileLeft;
