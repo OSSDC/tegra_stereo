@@ -49,10 +49,10 @@ void TegraStereoProc::onInit()
     pub_points2_ = private_nh.advertise<sensor_msgs::PointCloud2> ("points2", 1);
 
     // Synchronize input topics
-    info_approx_sync_ = boost::make_shared<InfoApproxSync_t> (InfoExactPolicy_t (10u), left_info_sub_, right_info_sub_);
+    info_approx_sync_ = boost::make_shared<InfoApproxSync_t> (InfoApproxPolicy_t (10u), left_info_sub_, right_info_sub_);
     info_approx_sync_->registerCallback (boost::bind (&TegraStereoProc::infoCallback, this, _1, _2));
 
-    image_approx_sync_ = boost::make_shared<ImageApproxSync_t> (ImageExactPolicy_t (10u), left_raw_sub_, right_raw_sub_);
+    image_approx_sync_ = boost::make_shared<ImageApproxSync_t> (ImageApproxPolicy_t (10u), left_raw_sub_, right_raw_sub_);
 
     //camera calibration files
     std::string cameraCalibrationFileLeft;
@@ -195,12 +195,13 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
     }
 
     // filter disparity ARM (remove noisy measurments)
-    const int sigma = 5;
+    const int thresh = 40; // noise higher than this thresh will be removed
+    const int sigma = 5;   // smthing factor
     cv::Mat disp_edge;			cv::Laplacian (disparity_raw, disp_edge, CV_16S, 5);
     cv::Mat disp_abs;			cv::convertScaleAbs(disp_edge, disp_abs);
     cv::Mat disp_smt;			cv::GaussianBlur(disp_abs, disp_smt, cv::Size(sigma*5, sigma*5), sigma, sigma);
     					disp_smt.convertTo(disp_smt, CV_8U);
-    cv::Mat disparity_edge_threshold;	cv::threshold (disp_smt, disparity_edge_threshold, 40, 255, cv::THRESH_BINARY_INV);
+    cv::Mat disparity_edge_threshold;	cv::threshold (disp_smt, disparity_edge_threshold, thresh, 255, cv::THRESH_BINARY_INV);
     cv::Mat disparity_filtered;		cv::bitwise_and (disparity_raw, disparity_edge_threshold, disparity_filtered, disparity_edge_threshold);
 
     //publish raw disparity output in pixels
