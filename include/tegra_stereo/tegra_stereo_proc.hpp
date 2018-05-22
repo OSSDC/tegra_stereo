@@ -92,6 +92,7 @@ private:
 
     // scratch buffer for dense point cloud
     mutable cv::Mat_<cv::Vec3f> dense_points_;
+    cv::cuda::GpuMat testGpuMat;
 
     // filter for disparity image
     //cv::Ptr<cv::ximgproc::FastGlobalSmootherFilter> disp_filter_;

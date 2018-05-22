@@ -3,12 +3,17 @@ project(tegra_stereo)
 
 find_package(catkin REQUIRED
   COMPONENTS roscpp nodelet
-  cv_bridge image_geometry image_proc image_transport
+  image_transport
   message_filters sensor_msgs stereo_msgs
   camera_calibration_parsers camera_info_manager)
 find_package(Boost REQUIRED COMPONENTS thread)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3 REQUIRED
+	NO_MODULE
+        PATHS /usr/local/opencv_3.3.0
+        NO_DEFAULT_PATH
+	CONFIG
+)
 
 find_package(PkgConfig)
 pkg_check_modules(YAML_CPP yaml-cpp)
