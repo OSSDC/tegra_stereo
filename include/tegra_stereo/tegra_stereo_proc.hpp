@@ -92,7 +92,6 @@ private:
 
     // scratch buffer for dense point cloud
     mutable cv::Mat_<cv::Vec3f> dense_points_;
-    cv::cuda::GpuMat testGpuMat;
 
     // filter for disparity image
     //cv::Ptr<cv::ximgproc::FastGlobalSmootherFilter> disp_filter_;
@@ -113,6 +112,10 @@ private:
     uint32_t elapsed_time_counter_;
     std::string out_left_frame_id;
     std::string out_right_frame_id;
+
+    cv::Ptr<cv::cuda::Filter> sf_cuda_ = cv::cuda::createSobelFilter(CV_8UC1, CV_8UC1, 3, 3, 7);
+    cv::Ptr<cv::cuda::Filter> gf_cuda_ = cv::cuda::createGaussianFilter(CV_8UC1, CV_8UC1,cv::Size(31, 31), 7, 7);
+    cv::Ptr<cv::cuda::DisparityBilateralFilter> dbf_cuda_ = cv::cuda::createDisparityBilateralFilter(127, 7);
 
     void publishRectifiedImages (const cv::Mat &left_rect,
                                  const cv::Mat &right_rect,

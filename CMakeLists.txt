@@ -3,17 +3,16 @@ project(tegra_stereo)
 
 find_package(catkin REQUIRED
   COMPONENTS roscpp nodelet
-  image_transport
+  image_geometry image_transport
   message_filters sensor_msgs stereo_msgs
   camera_calibration_parsers camera_info_manager)
 find_package(Boost REQUIRED COMPONENTS thread)
 
-find_package(OpenCV 3 REQUIRED
-	NO_MODULE
-        PATHS /usr/local/opencv_3.3.0
-        NO_DEFAULT_PATH
-	CONFIG
-)
+set(cv_bridge_DIR "/home/nvidia/ws_opencv/deve/share/cv_bridge/cmake")
+find_package(cv_bridge REQUIRED NO_CMAKE_PATH)
+
+set(OpenCV_DIR "/home/nvidia/opencv/build")
+find_package(OpenCV 3 REQUIRED NO_CMAKE_PATH)
 
 find_package(PkgConfig)
 pkg_check_modules(YAML_CPP yaml-cpp)
@@ -48,7 +47,7 @@ catkin_package(
   DEPENDS OpenCV
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS})
+include_directories(include ${OpenCV_INCLUDE_DIRS} ${cv_bridge_INCLUDE_DIR} ${YAML_CPP_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
 link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 find_package(CUDA REQUIRED)
@@ -76,7 +75,7 @@ set(LIBSGM
 )
 
 cuda_add_library(tegra_stereo_proc src/tegra_stereo_proc.cpp ${LIBSGM})
-target_link_libraries(tegra_stereo_proc ${CUDA_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${YAML_CPP_LIBRARIES})
+target_link_libraries(tegra_stereo_proc ${CUDA_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${cv_bridge_INCLUDE_DIR} ${YAML_CPP_LIBRARIES})
 
 ################################################
 #Add all files in subdirectories of the project in

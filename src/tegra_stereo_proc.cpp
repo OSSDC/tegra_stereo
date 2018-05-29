@@ -194,15 +194,18 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
         elapsed_time_ms_acc_ = 0.0;
     }
 
-    // filter disparity ARM (remove noisy measurments)
-    const int thresh = 40; // noise higher than this thresh will be removed
-    const int sigma = 5;   // smthing factor
-    cv::Mat disp_edge;			cv::Laplacian (disparity_raw, disp_edge, CV_16S, 5);
-    cv::Mat disp_abs;			cv::convertScaleAbs(disp_edge, disp_abs);
-    cv::Mat disp_smt;			cv::GaussianBlur(disp_abs, disp_smt, cv::Size(sigma*5, sigma*5), sigma, sigma);
-    					disp_smt.convertTo(disp_smt, CV_8U);
-    cv::Mat disparity_edge_threshold;	cv::threshold (disp_smt, disparity_edge_threshold, thresh, 255, cv::THRESH_BINARY_INV);
-    cv::Mat disparity_filtered;		cv::bitwise_and (disparity_raw, disparity_edge_threshold, disparity_filtered, disparity_edge_threshold);
+    // filter disparity opencv cuda (remove noisy measurments)
+    const int thresh = 30; // noise higher than this thresh will be removed
+    cv::cuda::GpuMat disp_gpu(disparity_raw);
+    cv::cuda::GpuMat img_gpu(left_rect_cv);
+    cv::cuda::GpuMat disp_bil_gpu;		dbf_cuda_->apply(disp_gpu, img_gpu, disp_bil_gpu);
+    cv::cuda::GpuMat disp_edge_gpu;		sf_cuda_->apply(disp_bil_gpu, disp_edge_gpu);
+    cv::cuda::GpuMat disp_abs_gpu;		cv::cuda::abs(disp_edge_gpu, disp_abs_gpu);
+    cv::cuda::GpuMat disp_smt_gpu;		gf_cuda_->apply(disp_abs_gpu, disp_smt_gpu);
+    cv::cuda::GpuMat disp_edge_thr_gpu;		cv::cuda::threshold (disp_smt_gpu, disp_edge_thr_gpu, thresh, 255, cv::THRESH_BINARY_INV);
+    cv::cuda::GpuMat disp_filtered_gpu;		cv::cuda::bitwise_and (disp_bil_gpu, disp_edge_thr_gpu, disp_filtered_gpu);//, disp_edge_thr_gpu);
+    cv::Mat disparity_filtered;
+    disp_filtered_gpu.download(disparity_filtered);
 
     //publish raw disparity output in pixels
     if(pub_disparity_raw_.getNumSubscribers() >0)
