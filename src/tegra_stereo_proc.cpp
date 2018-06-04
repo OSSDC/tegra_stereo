@@ -198,14 +198,14 @@ bool TegraStereoProc::processRectified(const cv::Mat &left_rect_cv, const cv::Ma
     const int thresh = 30; // noise higher than this thresh will be removed
     cv::cuda::GpuMat disp_gpu(disparity_raw);
     cv::cuda::GpuMat img_gpu(left_rect_cv);
-    cv::cuda::GpuMat disp_bil_gpu;		dbf_cuda_->apply(disp_gpu, img_gpu, disp_bil_gpu);
-    cv::cuda::GpuMat disp_edge_gpu;		sf_cuda_->apply(disp_bil_gpu, disp_edge_gpu);
+    cv::cuda::GpuMat disp_edge_gpu;		sf_cuda_->apply(disp_gpu, disp_edge_gpu);
     cv::cuda::GpuMat disp_abs_gpu;		cv::cuda::abs(disp_edge_gpu, disp_abs_gpu);
     cv::cuda::GpuMat disp_smt_gpu;		gf_cuda_->apply(disp_abs_gpu, disp_smt_gpu);
     cv::cuda::GpuMat disp_edge_thr_gpu;		cv::cuda::threshold (disp_smt_gpu, disp_edge_thr_gpu, thresh, 255, cv::THRESH_BINARY_INV);
-    cv::cuda::GpuMat disp_filtered_gpu;		cv::cuda::bitwise_and (disp_bil_gpu, disp_edge_thr_gpu, disp_filtered_gpu);//, disp_edge_thr_gpu);
+    cv::cuda::GpuMat disp_filtered_gpu;		cv::cuda::bitwise_and (disp_gpu, disp_edge_thr_gpu, disp_filtered_gpu);//, disp_edge_thr_gpu);
+    cv::cuda::GpuMat disp_bil_gpu;		dbf_cuda_->apply(disp_filtered_gpu, img_gpu, disp_bil_gpu);
     cv::Mat disparity_filtered;
-    disp_filtered_gpu.download(disparity_filtered);
+    disp_bil_gpu.download(disparity_filtered);
 
     //publish raw disparity output in pixels
     if(pub_disparity_raw_.getNumSubscribers() >0)
